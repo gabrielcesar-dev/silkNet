@@ -229,7 +229,7 @@ def process_single_video(video_path: Path, output_dir: Path, num_samples: int) -
             frame_index += 1
 
         for i, temp_path in enumerate(reservoir_paths):
-            final_filename = f"{video_path.stem}_{i:04d}.png"
+            final_filename = f"{video_path.stem}_{i:04d}.jpeg"
             final_filepath = output_dir / final_filename
             temp_path.rename(final_filepath)
             frames_saved_count += 1

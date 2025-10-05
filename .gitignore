@@ -190,4 +190,19 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+*.swo
+*.log
 temp/
+tmp/
+
+# Directories for outputs (while developing, can be changed as needed)
+# TODO: remove from .gitignore
+models/
+plots/
+reports/

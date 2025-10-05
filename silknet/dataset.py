@@ -217,7 +217,7 @@ def process_single_video(video_path: Path, output_dir: Path, num_samples: int) -
             frame_resized = cv2.resize(frame, (config.IMG_SIZE, config.IMG_SIZE), interpolation=cv2.INTER_AREA)
 
             if len(reservoir_paths) < num_samples:
-                temp_filepath = temp_dir / f"temp_frame_{frame_index:05d}.png"
+                temp_filepath = temp_dir / f"temp_frame_{frame_index:05d}.jpeg"
                 cv2.imwrite(str(temp_filepath), frame_resized, [cv2.IMWRITE_JPEG_QUALITY, 92])
                 reservoir_paths.append(temp_filepath)
             else:

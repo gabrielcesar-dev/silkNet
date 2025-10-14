@@ -1,8 +1,8 @@
 from pathlib import Path
 
 import numpy as np
-import torch
 from sklearn.model_selection import train_test_split
+import torch
 from torch.utils.data import DataLoader, Subset, WeightedRandomSampler
 from torchvision.datasets import ImageFolder
 
@@ -12,7 +12,7 @@ from silknet.modeling.transforms import train_transforms, val_transforms
 
 def train_val_test_split(input_path: Path) -> tuple[DataLoader, DataLoader, DataLoader]:
     full_set = ImageFolder(root=input_path)
-    
+
     indices = list(range(len(full_set)))
     targets = full_set.targets
 
@@ -68,4 +68,3 @@ def train_val_test_split(input_path: Path) -> tuple[DataLoader, DataLoader, Data
     )
 
     return train_loader, val_loader, test_loader
-

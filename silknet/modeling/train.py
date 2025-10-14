@@ -158,7 +158,7 @@ def main(input_path: Path = PROCESSED_DATA_DIR / DATASET_NAME, debug: bool = Fal
     free_gpu_memory()
     device = setup_environment(SEED)
 
-    train_loader, val_loader, _ = train_val_test_split(input_path)
+    train_loader, val_loader, _ = train_val_test_split(input_path, use_albumentations=True)
 
     if train_loader is None or val_loader is None:
         logger.error("Failed to create data loaders.")

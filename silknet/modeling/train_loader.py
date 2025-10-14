@@ -7,10 +7,10 @@ from torch.utils.data import DataLoader, Subset, WeightedRandomSampler
 from torchvision.datasets import ImageFolder
 
 from silknet.config import BATCH_SIZE, SEED
-from silknet.modeling.transforms import train_transforms, val_transforms
+from silknet.modeling.transforms import train_transforms, val_transforms, apply_albumentations_transform
 
 
-def train_val_test_split(input_path: Path) -> tuple[DataLoader, DataLoader, DataLoader]:
+def train_val_test_split(input_path: Path, use_albumentations: bool = False) -> tuple[DataLoader, DataLoader, DataLoader]:
     full_set = ImageFolder(root=input_path)
 
     indices = list(range(len(full_set)))
@@ -32,7 +32,10 @@ def train_val_test_split(input_path: Path) -> tuple[DataLoader, DataLoader, Data
     val_subset = Subset(full_set, val_indices)
     test_subset = Subset(full_set, test_indices)
 
-    train_subset.dataset.transform = train_transforms  # type: ignore
+    if use_albumentations:
+        train_subset.dataset.transform = apply_albumentations_transform  # type: ignore
+    else:
+        train_subset.dataset.transform = train_transforms  # type: ignore
     val_subset.dataset.transform = val_transforms  # type: ignore
     test_subset.dataset.transform = val_transforms  # type: ignore
 

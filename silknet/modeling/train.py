@@ -1,31 +1,30 @@
+import json
 from pathlib import Path
 import random
 from time import strftime, time
-import json
-from uuid import uuid4
 
 from loguru import logger
 import numpy as np
+from sklearn.metrics import precision_recall_fscore_support
 import torch
 import torch.nn as nn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import typer
-from sklearn.metrics import precision_recall_fscore_support
 
 from silknet.config import (
+    DATASET_NAME,
     LEARNING_RATE,
     MODELS_DIR,
     NUM_EPOCHS,
     PROCESSED_DATA_DIR,
-    DATASET_NAME,
     REPORTS_DIR,
     SEED,
 )
-from silknet.modeling.models import SequentialCNN
+from silknet.modeling.models import ResNet18
 from silknet.modeling.train_loader import train_val_test_split
-
+from silknet.modeling.earlyStopping import EarlyStopping
 
 app = typer.Typer()
 
@@ -46,18 +45,27 @@ def train_one_epoch(
         inputs, labels = inputs.to(device), labels.to(device)
 
         optimizer.zero_grad()
+
         outputs = model(inputs)
         loss = criterion(outputs, labels)
+
+        if not torch.isfinite(loss):
+            logger.warning("Non-finite loss encountered (train). Skipping batch.")
+            optimizer.zero_grad()
+            continue
+
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         optimizer.step()
 
-        running_loss += loss.item() * inputs.size(0)
+        # statistics
+        running_loss += float(loss.item()) * inputs.size(0)
         _, preds = torch.max(outputs, 1)
         correct_predictions += (preds == labels).sum().item()
         total_samples += labels.size(0)
 
-    epoch_loss = running_loss / total_samples
-    epoch_acc = float(correct_predictions) / total_samples
+    epoch_loss = running_loss / total_samples if total_samples > 0 else float('nan')
+    epoch_acc = float(correct_predictions) / total_samples if total_samples > 0 else 0.0
     return epoch_loss, epoch_acc
 
 
@@ -79,7 +87,14 @@ def validate_one_epoch(
             outputs = model(inputs)
             loss = criterion(outputs, labels)
 
-            running_loss += loss.item() * inputs.size(0)
+            if not torch.isfinite(loss):
+                try:
+                    logger.warning("Non-finite loss encountered (val). Skipping batch in metrics.")
+                except Exception:
+                    pass
+                continue
+
+            running_loss += float(loss.item()) * inputs.size(0)
             _, preds = torch.max(outputs, 1)
             correct_predictions += (preds == labels).sum().item()
             total_samples += labels.size(0)
@@ -103,6 +118,7 @@ def validate_one_epoch(
     }
     return metrics
 
+
 def train_history_report(history: dict, model_name: str):
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -113,6 +129,7 @@ def train_history_report(history: dict, model_name: str):
         json.dump(history, f, indent=4)
     logger.info(f"Training history saved to: {history_path}")
 
+
 def setup_environment(seed=42):
     random.seed(seed)
     np.random.seed(seed)
@@ -121,16 +138,23 @@ def setup_environment(seed=42):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    logger.info(f"Using device: {torch.cuda.get_device_name(device)}")
+    if device.type == "cuda":
+        try:
+            logger.info(f"Using device: {torch.cuda.get_device_name(device)}")
+        except Exception:
+            logger.info("Using CUDA device")
+    else:
+        logger.info("Using device: cpu")
     return device
-
 def free_gpu_memory():
     import gc
+
     gc.collect()
     torch.cuda.empty_cache()
 
+
 @app.command()
-def main(input_path: Path = PROCESSED_DATA_DIR / DATASET_NAME):
+def main(input_path: Path = PROCESSED_DATA_DIR / DATASET_NAME, debug: bool = False):
     free_gpu_memory()
     device = setup_environment(SEED)
 
@@ -141,26 +165,46 @@ def main(input_path: Path = PROCESSED_DATA_DIR / DATASET_NAME):
         return
 
     NUM_CLASSES = len(train_loader.dataset.dataset.classes)  # type: ignore
-    model = SequentialCNN(num_classes=NUM_CLASSES)
+    model = ResNet18(num_classes=NUM_CLASSES)
     model = model.to(device)
 
     criterion = nn.CrossEntropyLoss().to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
     scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=0.1, patience=3)
+    scaler = None
 
-    best_val_f1 = 0.0
     history = {
-        "train_loss": [], "train_acc": [],
-        "val_loss": [], "val_acc": [],
-        "val_precision": [], "val_recall": [], "val_f1": [],
+        "train_loss": [],
+        "train_acc": [],
+        "val_loss": [],
+        "val_acc": [],
+        "val_precision": [],
+        "val_recall": [],
+        "val_f1": [],
     }
 
-    model_name = "model_" + strftime("%Y%m%d") + f"_{uuid4().hex}" + ".pt"
+    timestamp = strftime("%Y%m%d_%H%M%S")
+    model_class_name = type(model).__name__ if model is not None else "model"
+    model_name = f"{DATASET_NAME}_{model_class_name}_{timestamp}_e{NUM_EPOCHS}_s{SEED}.pt"
+
+    early_stopping = EarlyStopping(
+        patience=7,
+        verbose=True,
+        delta=1e-4,
+        path=MODELS_DIR / (Path(model_name).stem + ".pt"),
+    )
+    
 
     for epoch in tqdm(range(NUM_EPOCHS), desc="Epochs"):
         start_time = time()
+
+
         train_loss, train_acc = train_one_epoch(
-            model, train_loader, criterion, optimizer, device
+            model,
+            train_loader,
+            criterion,
+            optimizer,
+            device,
         )
         val_metrics = validate_one_epoch(model, val_loader, criterion, device)
         scheduler.step(val_metrics["loss"])
@@ -176,26 +220,29 @@ def main(input_path: Path = PROCESSED_DATA_DIR / DATASET_NAME):
         end_time = time()
         epoch_mins, epoch_secs = divmod(end_time - start_time, 60)
 
-        logger.info(f"Epoch {epoch + 1}/{NUM_EPOCHS} | Time: {int(epoch_mins)}m {int(epoch_secs)}s")
+        logger.info(
+            f"Epoch {epoch + 1}/{NUM_EPOCHS} | Time: {int(epoch_mins)}m {int(epoch_secs)}s"
+        )
         logger.info(f"\tTrain -> Loss: {train_loss:.4f} | Acc: {train_acc:.4f}")
-        logger.info(f"\tValid -> Loss: {val_metrics['loss']:.4f} | Acc: {val_metrics['accuracy']:.4f} | F1: {val_metrics['f1_score']:.4f}")
+        logger.info(
+            f"\tValid -> Loss: {val_metrics['loss']:.4f} | Acc: {val_metrics['accuracy']:.4f} | F1: {val_metrics['f1_score']:.4f}"
+        )
 
-        current_f1 = val_metrics["f1_score"]
-        if current_f1 > best_val_f1:
-            best_val_f1 = current_f1
-            torch.save(model.state_dict(), MODELS_DIR / model_name)
-            logger.info(f"--> New best model saved with Val F1-Score: {best_val_f1:.4f}")
+        early_stopping(val_metrics["loss"], model)
+        if early_stopping.early_stop:
+            logger.info("EarlyStopping triggered. Stopping training loop.")
+            break
+
         
         free_gpu_memory()
-    
+
     logger.success("Training complete.")
-    logger.info(f"Best model saved to: {MODELS_DIR / model_name}")
+    logger.info(
+        f"Best model (by val loss) saved to: {MODELS_DIR / (Path(model_name).stem + '_best_by_val_loss.pt')}"
+    )
 
     train_history_report(history, model_name)
-
-    logger.info("Run `python -m silknet.modeling.predict` to generate the predictions file for plotting.")
 
 
 if __name__ == "__main__":
     app()
-

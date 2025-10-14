@@ -22,12 +22,12 @@ REPORTS_DIR = PROJ_ROOT / "reports"
 FIGURES_DIR = REPORTS_DIR / "figures"
 
 SPLIT_RATIO = 0.7  # Train/Val split ratio
-LEARNING_RATE = 0.01  # Learning rate for the optimizer
-BATCH_SIZE = 64  # Batch size for training and validation
+LEARNING_RATE = 0.001  # Learning rate for the optimizer (reduced to avoid instability)
+BATCH_SIZE = 128  # Batch size for training and validation (reduced to avoid OOM)
 NUM_EPOCHS = 15  # Number of training epochs
 SEED = 42
 
-IMG_SIZE = 254  # Image size (height and width)
+IMG_SIZE = 224  # Image size (height and width)
 
 DATASET_NAME = "hollow_knight_silksong_dataset"
 

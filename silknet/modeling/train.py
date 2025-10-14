@@ -22,9 +22,9 @@ from silknet.config import (
     REPORTS_DIR,
     SEED,
 )
+from silknet.modeling.earlyStopping import EarlyStopping
 from silknet.modeling.models import ResNet18
 from silknet.modeling.train_loader import train_val_test_split
-from silknet.modeling.earlyStopping import EarlyStopping
 
 app = typer.Typer()
 

@@ -1,9 +1,9 @@
 from pathlib import Path
 from typing import Optional, Union
 
+from loguru import logger
 import torch
 import torch.nn as nn
-from loguru import logger
 
 
 class EarlyStopping:

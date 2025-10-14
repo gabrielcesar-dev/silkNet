@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+
 class SequentialCNN(nn.Module):
     def __init__(self, num_classes):
         super(SequentialCNN, self).__init__()

@@ -8,7 +8,7 @@ import seaborn as sns
 from sklearn.metrics import confusion_matrix
 import typer
 
-from silknet.config import FIGURES_DIR, REPORTS_DIR
+from silknet.config import FIGURES_DIR
 
 app = typer.Typer()
 

@@ -1,8 +1,7 @@
-from torchvision import transforms
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 import numpy as np
-
+from torchvision import transforms
 
 from silknet.config import IMG_SIZE
 

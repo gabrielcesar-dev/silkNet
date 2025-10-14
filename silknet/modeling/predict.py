@@ -1,18 +1,17 @@
 import json
 from pathlib import Path
+import re
 
 from loguru import logger
-import re
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 import torch
 from tqdm import tqdm
 import typer
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 
-from silknet.config import DATASET_NAME, MODELS_DIR, PROCESSED_DATA_DIR, REPORTS_DIR
+from silknet.config import DATASET_NAME, PROCESSED_DATA_DIR, REPORTS_DIR, SEED
 from silknet.modeling.models import ResNet18
-from silknet.modeling.train_loader import train_val_test_split
 from silknet.modeling.train import setup_environment
-from silknet.config import SEED
+from silknet.modeling.train_loader import train_val_test_split
 
 
 def parse_model_filename(model_path: Path):

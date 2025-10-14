@@ -2,11 +2,11 @@ import json
 from pathlib import Path
 from typing import Any, Dict
 
+from loguru import logger
 import matplotlib.pyplot as plt
 import seaborn as sns
-import typer
-from loguru import logger
 from sklearn.metrics import confusion_matrix
+import typer
 
 from silknet.config import FIGURES_DIR, REPORTS_DIR
 
@@ -97,17 +97,17 @@ def generate_learning_curves_plot(data: Dict[str, Any], output_path: Path):
 
 @app.command()
 def confusion_matrix_cmd(
-    predictions_filename: str = typer.Option(
+    predictions_path: Path = typer.Option(
         ...,
-        "--predictions-filename",
-        "-f",
-        help="Filename of the predictions JSON file in /reports.",
-    )
+        "--predictions-path",
+        "-p",
+        help="Full path to the predictions JSON file.",
+    ),
 ):
     """
     CLI command to generate a confusion matrix plot from a predictions file.
     """
-    input_path = REPORTS_DIR / predictions_filename
+    input_path = Path(predictions_path)
     data = load_json_data(input_path)
     output_filename = input_path.stem + "_confusion_matrix.png"
     output_path = FIGURES_DIR / output_filename
@@ -116,17 +116,17 @@ def confusion_matrix_cmd(
 
 @app.command()
 def learning_curves_cmd(
-    history_filename: str = typer.Option(
+    history_path: Path = typer.Option(
         ...,
-        "--history-filename",
-        "-f",
-        help="Filename of the training history JSON file in /reports.",
-    )
+        "--history-path",
+        "-p",
+        help="Full path to the training history JSON file.",
+    ),
 ):
     """
     CLI command to generate learning curve plots from a history file.
     """
-    input_path = REPORTS_DIR / history_filename
+    input_path = Path(history_path)
     data = load_json_data(input_path)
     output_filename = input_path.stem + "_learning_curves.png"
     output_path = FIGURES_DIR / output_filename
@@ -135,4 +135,3 @@ def learning_curves_cmd(
 
 if __name__ == "__main__":
     app()
-

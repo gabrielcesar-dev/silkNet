@@ -226,21 +226,21 @@ def process_single_video(video_path: Path, output_dir: Path, num_samples: int) -
             )
 
             if len(reservoir_paths) < num_samples:
-                temp_filepath = temp_dir / f"temp_frame_{frame_index:05d}.jpeg"
-                cv2.imwrite(str(temp_filepath), frame_resized, [cv2.IMWRITE_JPEG_QUALITY, 92])
+                temp_filepath = temp_dir / f"temp_frame_{frame_index:05d}.webp"
+                cv2.imwrite(str(temp_filepath), frame_resized, [cv2.IMWRITE_WEBP_QUALITY, 92])
                 reservoir_paths.append(temp_filepath)
             else:
                 j = random.randint(0, frame_index)
                 if j < num_samples:
                     path_to_overwrite = reservoir_paths[j]
                     cv2.imwrite(
-                        str(path_to_overwrite), frame_resized, [cv2.IMWRITE_JPEG_QUALITY, 92]
+                        str(path_to_overwrite), frame_resized, [cv2.IMWRITE_WEBP_QUALITY, 92]
                     )
 
             frame_index += 1
 
         for i, temp_path in enumerate(reservoir_paths):
-            final_filename = f"{video_path.stem}_{i:04d}.jpeg"
+            final_filename = f"{video_path.stem}_{i:04d}.webp"
             final_filepath = output_dir / final_filename
             temp_path.rename(final_filepath)
             frames_saved_count += 1

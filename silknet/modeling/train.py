@@ -154,7 +154,7 @@ def free_gpu_memory():
 
 
 @app.command()
-def main(input_path: Path = PROCESSED_DATA_DIR / DATASET_NAME, fine_tune: bool = True, model_name: str = "resnet18"):
+def main(input_path: Path = PROCESSED_DATA_DIR / DATASET_NAME, model_name: str = "resnetpretrained", fine_tune: bool = True):
     free_gpu_memory()
     device = setup_environment(SEED)
 

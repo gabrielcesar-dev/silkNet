@@ -23,7 +23,7 @@ from silknet.config import (
     SEED,
 )
 from silknet.modeling.early_stopping import EarlyStopping
-from silknet.modeling.models import ResNet18
+from silknet.modeling.models import ModelFactory, ModelNames
 from silknet.modeling.train_loader import train_val_test_split
 
 app = typer.Typer()
@@ -154,7 +154,7 @@ def free_gpu_memory():
 
 
 @app.command()
-def main(input_path: Path = PROCESSED_DATA_DIR / DATASET_NAME, debug: bool = False):
+def main(input_path: Path = PROCESSED_DATA_DIR / DATASET_NAME, fine_tune: bool = True, model_name: str = "resnet18"):
     free_gpu_memory()
     device = setup_environment(SEED)
 
@@ -165,7 +165,7 @@ def main(input_path: Path = PROCESSED_DATA_DIR / DATASET_NAME, debug: bool = Fal
         return
 
     NUM_CLASSES = len(train_loader.dataset.dataset.classes)  # type: ignore
-    model = ResNet18(num_classes=NUM_CLASSES)
+    model = ModelFactory.create_model(ModelNames[model_name.upper()], NUM_CLASSES, fine_tune=fine_tune)
     model = model.to(device)
 
     criterion = nn.CrossEntropyLoss().to(device)

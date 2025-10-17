@@ -1,6 +1,8 @@
+from enum import Enum
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision.models as models
 
 
 class SequentialCNN(nn.Module):
@@ -146,5 +148,32 @@ class ResNet18(nn.Module):
             x = self.fc(x)
 
             return x
+        
+
+class ModelNames(Enum):
+    SEQUENTIAL_CNN = "sequential_cnn"
+    RESNET18 = "resnet18"
+    RESNET_PRETRAINED = "resnetpretrained"
+
+class ModelFactory:
+    @staticmethod
+    def create_model(model_name: ModelNames, num_classes: int, fine_tune: bool = True) -> nn.Module:
+        if model_name == ModelNames.SEQUENTIAL_CNN:
+            return SequentialCNN(num_classes)
+        elif model_name == ModelNames.RESNET18:
+            return ResNet18(num_classes)
+        elif model_name == ModelNames.RESNET_PRETRAINED:
+            model = models.resnet18(weights=models.ResNet18_Weights.IMAGENET1K_V1)
+            if fine_tune:
+                
+                for param in model.parameters():
+                    param.requires_grad = False
+
+            model.fc = nn.Linear(model.fc.in_features, num_classes)
+
+            return model
+        else:
+            raise ValueError(f"Model {model_name} not recognized.")
+        
 
             

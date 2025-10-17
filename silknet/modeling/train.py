@@ -154,7 +154,14 @@ def free_gpu_memory():
 
 
 @app.command()
-def main(input_path: Path = PROCESSED_DATA_DIR / DATASET_NAME, model_name: str = "resnetpretrained", fine_tune: bool = True):
+def main(
+    input_path: Path = PROCESSED_DATA_DIR / DATASET_NAME, 
+    model_name: ModelNames = typer.Option(
+        ModelNames.RESNET_PRETRAINED.value,
+        case_sensitive=False
+    ),
+    fine_tune: bool = True
+):
     free_gpu_memory()
     device = setup_environment(SEED)
 
@@ -165,7 +172,7 @@ def main(input_path: Path = PROCESSED_DATA_DIR / DATASET_NAME, model_name: str =
         return
 
     NUM_CLASSES = len(train_loader.dataset.dataset.classes)  # type: ignore
-    model = ModelFactory.create_model(ModelNames[model_name.upper()], NUM_CLASSES, fine_tune=fine_tune)
+    model = ModelFactory.create_model(model_name, NUM_CLASSES, fine_tune=fine_tune)
     model = model.to(device)
 
     criterion = nn.CrossEntropyLoss().to(device)
@@ -185,13 +192,13 @@ def main(input_path: Path = PROCESSED_DATA_DIR / DATASET_NAME, model_name: str =
 
     timestamp = strftime("%Y%m%d_%H%M%S")
     model_class_name = type(model).__name__ if model is not None else "model"
-    model_name = f"{DATASET_NAME}_{model_class_name}_{timestamp}_e{NUM_EPOCHS}_s{SEED}.pt"
+    model_filename = f"{DATASET_NAME}_{model_class_name}_{timestamp}_e{NUM_EPOCHS}_s{SEED}.pt"
 
     early_stopping = EarlyStopping(
         patience=7,
         verbose=True,
         delta=1e-4,
-        path=MODELS_DIR / (Path(model_name).stem + ".pt"),
+        path=MODELS_DIR / (Path(model_filename).stem + ".pt"),
     )
     
 
@@ -238,10 +245,10 @@ def main(input_path: Path = PROCESSED_DATA_DIR / DATASET_NAME, model_name: str =
 
     logger.success("Training complete.")
     logger.info(
-        f"Best model (by val loss) saved to: {MODELS_DIR / (Path(model_name).stem + '_best_by_val_loss.pt')}"
+        f"Best model (by val loss) saved to: {MODELS_DIR / (Path(model_filename).stem + '_best_by_val_loss.pt')}"
     )
 
-    train_history_report(history, model_name)
+    train_history_report(history, model_filename)
 
 
 if __name__ == "__main__":

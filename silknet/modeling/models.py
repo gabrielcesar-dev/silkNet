@@ -1,3 +1,4 @@
+
 from enum import Enum
 import torch
 import torch.nn as nn
@@ -151,7 +152,7 @@ class ResNet18(nn.Module):
         
 
 class ModelNames(Enum):
-    SEQUENTIAL_CNN = "sequential_cnn"
+    SEQUENTIAL_CNN = "sequentialcnn"
     RESNET18 = "resnet18"
     RESNET_PRETRAINED = "resnetpretrained"
 
